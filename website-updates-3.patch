@@ -1,0 +1,259 @@
+diff --git a/src/lib/api.js b/src/lib/api.js
+new file mode 100644
+index 0000000..bc04957
+--- /dev/null
++++ b/src/lib/api.js
+@@ -0,0 +1,38 @@
++const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000"
++
++async function request(path) {
++  const res = await fetch(`${BASE_URL}${path}`)
++  if (!res.ok) {
++    const body = await res.json().catch(() => ({}))
++    throw new Error(body.error ?? `Request failed: ${res.status}`)
++  }
++  return res.json()
++}
++
++export function fetchProducts({ category, platform } = {}) {
++  const params = new URLSearchParams()
++  if (category) params.set("category", category)
++  if (platform) params.set("platform", platform)
++  const qs = params.toString()
++  return request(`/api/products${qs ? `?${qs}` : ""}`)
++}
++
++export function fetchSearchResults(query, { category, platform } = {}) {
++  const params = new URLSearchParams()
++  if (query) params.set("q", query)
++  if (category) params.set("category", category)
++  if (platform) params.set("platform", platform)
++  return request(`/api/products/search?${params.toString()}`)
++}
++
++export function fetchProductById(id) {
++  return request(`/api/products/${id}`)
++}
++
++export function fetchComparison(id) {
++  return request(`/api/products/${id}/comparisons`)
++}
++
++export function fetchAnalytics(id) {
++  return request(`/api/products/${id}/analytics`)
++}
+diff --git a/src/pages/Analytics.jsx b/src/pages/Analytics.jsx
+index 73c8722..d8c3541 100644
+--- a/src/pages/Analytics.jsx
++++ b/src/pages/Analytics.jsx
+@@ -1,13 +1,47 @@
+-import { useState } from "react"
++import { useEffect, useState } from "react"
+ import { Link } from "react-router-dom"
+ import { ArrowRight } from "lucide-react"
+ import AnalyticsSummary from "@/components/AnalyticsSummary"
+-import { getAllProducts, getComparison } from "@/data/mockProducts"
++import { fetchProducts, fetchComparison } from "@/lib/api"
+ 
+ export default function Analytics() {
+-  const products = getAllProducts()
+-  const [productId, setProductId] = useState(products[0].id)
+-  const comparison = getComparison(productId)
++  const [products, setProducts] = useState([])
++  const [productId, setProductId] = useState("")
++  const [comparison, setComparison] = useState(null)
++  const [error, setError] = useState(null)
++
++  useEffect(() => {
++    fetchProducts()
++      .then((data) => {
++        setProducts(data)
++        if (data.length) setProductId(data[0].id)
++      })
++      .catch((err) => setError(err.message))
++  }, [])
++
++  useEffect(() => {
++    if (!productId) return
++    fetchComparison(productId)
++      .then(setComparison)
++      .catch((err) => setError(err.message))
++  }, [productId])
++
++  if (error) {
++    return (
++      <div className="mx-auto flex max-w-7xl flex-col items-center px-4 py-24 text-center sm:px-6 lg:px-8">
++        <p className="font-heading text-lg font-bold text-foreground">Couldn't reach the backend</p>
++        <p className="mt-1 text-sm text-muted">{error}. Make sure the backend server is running on port 5000.</p>
++      </div>
++    )
++  }
++
++  if (!products.length || !comparison) {
++    return (
++      <div className="mx-auto flex max-w-7xl flex-col items-center px-4 py-24 text-center sm:px-6 lg:px-8">
++        <p className="text-sm text-muted">Loading analytics…</p>
++      </div>
++    )
++  }
+ 
+   return (
+     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+diff --git a/src/pages/ProductComparison.jsx b/src/pages/ProductComparison.jsx
+index 60256d9..6e30c52 100644
+--- a/src/pages/ProductComparison.jsx
++++ b/src/pages/ProductComparison.jsx
+@@ -1,4 +1,4 @@
+-import { useState } from "react"
++import { useEffect, useState } from "react"
+ import { Link, useParams } from "react-router-dom"
+ import { ChevronRight, TrendingDown, TrendingUp, ArrowLeft, Copy, Check, Printer } from "lucide-react"
+ import MetricCard from "@/components/MetricCard"
+@@ -6,9 +6,7 @@ import ComparisonTable from "@/components/ComparisonTable"
+ import MatchingFlow from "@/components/MatchingFlow"
+ import AnalyticsSummary from "@/components/AnalyticsSummary"
+ import { formatINR, formatPercent } from "@/lib/utils"
+-import { getComparison } from "@/data/mockProducts"
+-
+-const LAST_SYNCED = new Date()
++import { fetchComparison } from "@/lib/api"
+ 
+ function CopyLinkButton() {
+   const [copied, setCopied] = useState(false)
+@@ -34,12 +32,50 @@ function CopyLinkButton() {
+ 
+ export default function ProductComparison() {
+   const { productId } = useParams()
+-  const comparison = getComparison(productId)
++  const [comparison, setComparison] = useState(null)
++  const [isLoading, setIsLoading] = useState(true)
++  const [error, setError] = useState(null)
++  const [lastSynced, setLastSynced] = useState(null)
++
++  useEffect(() => {
++    let cancelled = false
++    setIsLoading(true)
++    setError(null)
++
++    fetchComparison(productId)
++      .then((data) => {
++        if (!cancelled) {
++          setComparison(data)
++          setLastSynced(new Date())
++        }
++      })
++      .catch((err) => {
++        if (!cancelled) setError(err.message)
++      })
++      .finally(() => {
++        if (!cancelled) setIsLoading(false)
++      })
++
++    return () => {
++      cancelled = true
++    }
++  }, [productId])
++
++  if (isLoading) {
++    return (
++      <div className="mx-auto flex max-w-7xl flex-col items-center px-4 py-24 text-center sm:px-6 lg:px-8">
++        <p className="text-sm text-muted">Loading comparison…</p>
++      </div>
++    )
++  }
+ 
+-  if (!comparison) {
++  if (error || !comparison) {
+     return (
+       <div className="mx-auto flex max-w-7xl flex-col items-center px-4 py-24 text-center sm:px-6 lg:px-8">
+-        <p className="font-heading text-lg font-bold text-foreground">Product not found</p>
++        <p className="font-heading text-lg font-bold text-foreground">
++          {error ? "Couldn't reach the backend" : "Product not found"}
++        </p>
++        {error && <p className="mt-1 text-sm text-muted">{error}. Make sure the backend server is running on port 5000.</p>}
+         <Link to="/search" className="mt-4 text-sm font-semibold text-primary">
+           Back to search
+         </Link>
+@@ -63,9 +99,13 @@ export default function ProductComparison() {
+         </div>
+         <div className="flex items-center gap-3">
+           <span className="text-xs text-muted">
+-            Prices last synced {LAST_SYNCED.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+-            {" · "}
+-            {LAST_SYNCED.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
++            {lastSynced && (
++              <>
++                Prices last synced {lastSynced.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
++                {" · "}
++                {lastSynced.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
++              </>
++            )}
+           </span>
+           <CopyLinkButton />
+           <button
+diff --git a/src/pages/SearchResults.jsx b/src/pages/SearchResults.jsx
+index 42f22d0..cc1189a 100644
+--- a/src/pages/SearchResults.jsx
++++ b/src/pages/SearchResults.jsx
+@@ -4,7 +4,8 @@ import { SlidersHorizontal } from "lucide-react"
+ import SearchBar from "@/components/SearchBar"
+ import ProductCard from "@/components/ProductCard"
+ import ProductCardSkeleton from "@/components/ProductCardSkeleton"
+-import { CATEGORIES, PLATFORMS, searchProducts } from "@/data/mockProducts"
++import { CATEGORIES, PLATFORMS } from "@/data/mockProducts"
++import { fetchSearchResults } from "@/lib/api"
+ 
+ export default function SearchResults() {
+   const [searchParams] = useSearchParams()
+@@ -12,18 +13,30 @@ export default function SearchResults() {
+   const [category, setCategory] = useState(searchParams.get("category") ?? "")
+   const [platform, setPlatform] = useState("")
+   const [sort, setSort] = useState("relevance")
++  const [products, setProducts] = useState([])
+   const [isLoading, setIsLoading] = useState(true)
++  const [error, setError] = useState(null)
+ 
+   useEffect(() => {
++    let cancelled = false
+     setIsLoading(true)
+-    const timer = setTimeout(() => setIsLoading(false), 350)
+-    return () => clearTimeout(timer)
+-  }, [query, category, platform])
++    setError(null)
+ 
+-  const products = useMemo(
+-    () => searchProducts(query, { category: category || undefined, platform: platform || undefined }),
+-    [query, category, platform],
+-  )
++    fetchSearchResults(query, { category: category || undefined, platform: platform || undefined })
++      .then((data) => {
++        if (!cancelled) setProducts(data)
++      })
++      .catch((err) => {
++        if (!cancelled) setError(err.message)
++      })
++      .finally(() => {
++        if (!cancelled) setIsLoading(false)
++      })
++
++    return () => {
++      cancelled = true
++    }
++  }, [query, category, platform])
+ 
+   const cards = useMemo(() => {
+     const flattened = products.flatMap((product) =>
+@@ -144,7 +157,12 @@ export default function SearchResults() {
+         </aside>
+ 
+         <div className="flex-1">
+-          {isLoading ? (
++          {error ? (
++            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-negative py-24 text-center">
++              <p className="text-sm font-semibold text-negative">Couldn't reach the backend</p>
++              <p className="mt-1 text-sm text-muted">{error}. Make sure the backend server is running on port 5000.</p>
++            </div>
++          ) : isLoading ? (
+             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+               {Array.from({ length: 6 }).map((_, i) => (
+                 <ProductCardSkeleton key={i} />
