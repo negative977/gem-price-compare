@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { SlidersHorizontal } from "lucide-react"
 import SearchBar from "@/components/SearchBar"
 import ProductCard from "@/components/ProductCard"
+import ProductCardSkeleton from "@/components/ProductCardSkeleton"
 import { CATEGORIES, PLATFORMS, searchProducts } from "@/data/mockProducts"
 
 export default function SearchResults() {
@@ -11,6 +12,13 @@ export default function SearchResults() {
   const [category, setCategory] = useState(searchParams.get("category") ?? "")
   const [platform, setPlatform] = useState("")
   const [sort, setSort] = useState("relevance")
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setIsLoading(true)
+    const timer = setTimeout(() => setIsLoading(false), 350)
+    return () => clearTimeout(timer)
+  }, [query, category, platform])
 
   const products = useMemo(
     () => searchProducts(query, { category: category || undefined, platform: platform || undefined }),
@@ -136,7 +144,13 @@ export default function SearchResults() {
         </aside>
 
         <div className="flex-1">
-          {cards.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : cards.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface py-24 text-center">
               <p className="text-sm font-semibold text-foreground">No matching products found</p>
               <p className="mt-1 text-sm text-muted">Try a different search term or clear your filters.</p>

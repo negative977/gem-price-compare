@@ -1,0 +1,288 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 91c132b..3b94c64 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,6 +1,7 @@
+ import { Routes, Route } from "react-router-dom"
+ import Navbar from "@/components/Navbar"
+ import Footer from "@/components/Footer"
++import ScrollToTopButton from "@/components/ScrollToTopButton"
+ import Home from "@/pages/Home"
+ import SearchResults from "@/pages/SearchResults"
+ import ProductComparison from "@/pages/ProductComparison"
+@@ -23,6 +24,7 @@ export default function App() {
+         </Routes>
+       </main>
+       <Footer />
++      <ScrollToTopButton />
+     </div>
+   )
+ }
+diff --git a/src/components/FAQAccordion.jsx b/src/components/FAQAccordion.jsx
+new file mode 100644
+index 0000000..b10210b
+--- /dev/null
++++ b/src/components/FAQAccordion.jsx
+@@ -0,0 +1,34 @@
++import { useState } from "react"
++import { ChevronDown } from "lucide-react"
++
++export default function FAQAccordion({ items }) {
++  const [openIndex, setOpenIndex] = useState(null)
++
++  return (
++    <div className="divide-y divide-border rounded-lg border border-border bg-card">
++      {items.map((item, index) => {
++        const isOpen = openIndex === index
++        return (
++          <div key={item.question}>
++            <button
++              type="button"
++              onClick={() => setOpenIndex(isOpen ? null : index)}
++              aria-expanded={isOpen}
++              className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
++            >
++              <span className="text-sm font-semibold text-foreground">{item.question}</span>
++              <ChevronDown
++                className={`h-4 w-4 shrink-0 text-muted transition-transform ${isOpen ? "rotate-180" : ""}`}
++              />
++            </button>
++            {isOpen && (
++              <div className="px-5 pb-4">
++                <p className="text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
++              </div>
++            )}
++          </div>
++        )
++      })}
++    </div>
++  )
++}
+diff --git a/src/components/ProductCardSkeleton.jsx b/src/components/ProductCardSkeleton.jsx
+new file mode 100644
+index 0000000..9d34792
+--- /dev/null
++++ b/src/components/ProductCardSkeleton.jsx
+@@ -0,0 +1,24 @@
++export default function ProductCardSkeleton() {
++  return (
++    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
++      <div className="h-44 animate-pulse bg-muted-surface" />
++      <div className="flex flex-1 flex-col gap-3 p-5">
++        <div className="flex items-center justify-between">
++          <div className="h-5 w-14 animate-pulse rounded-full bg-muted-surface" />
++        </div>
++        <div className="space-y-2">
++          <div className="h-3 w-16 animate-pulse rounded bg-muted-surface" />
++          <div className="h-4 w-4/5 animate-pulse rounded bg-muted-surface" />
++        </div>
++        <div className="flex gap-1.5">
++          <div className="h-5 w-16 animate-pulse rounded-md bg-muted-surface" />
++          <div className="h-5 w-16 animate-pulse rounded-md bg-muted-surface" />
++        </div>
++        <div className="mt-auto flex items-center justify-between pt-2">
++          <div className="h-6 w-20 animate-pulse rounded bg-muted-surface" />
++          <div className="h-8 w-24 animate-pulse rounded-md bg-muted-surface" />
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/src/components/ScrollToTopButton.jsx b/src/components/ScrollToTopButton.jsx
+new file mode 100644
+index 0000000..f0ebe24
+--- /dev/null
++++ b/src/components/ScrollToTopButton.jsx
+@@ -0,0 +1,27 @@
++import { useEffect, useState } from "react"
++import { ArrowUp } from "lucide-react"
++
++export default function ScrollToTopButton() {
++  const [visible, setVisible] = useState(false)
++
++  useEffect(() => {
++    function handleScroll() {
++      setVisible(window.scrollY > 400)
++    }
++    window.addEventListener("scroll", handleScroll, { passive: true })
++    return () => window.removeEventListener("scroll", handleScroll)
++  }, [])
++
++  if (!visible) return null
++
++  return (
++    <button
++      type="button"
++      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
++      aria-label="Scroll to top"
++      className="fixed bottom-6 right-6 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary-strong"
++    >
++      <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
++    </button>
++  )
++}
+diff --git a/src/pages/About.jsx b/src/pages/About.jsx
+index a773a8f..8d2d660 100644
+--- a/src/pages/About.jsx
++++ b/src/pages/About.jsx
+@@ -1,4 +1,28 @@
+ import { ShieldCheck, ScanSearch, LineChart, GitCompareArrows, Database, Layers } from "lucide-react"
++import FAQAccordion from "@/components/FAQAccordion"
++
++const FAQ_ITEMS = [
++  {
++    question: "Where does the price data come from?",
++    answer:
++      "This preview uses illustrative sample data. In production, listings would be pulled from the GeM catalogue and partner retail platforms on a scheduled basis.",
++  },
++  {
++    question: "How is a 'match' score calculated?",
++    answer:
++      "Match confidence compares normalized attributes — brand, model, specifications, and category — between a GeM listing and a candidate retail listing, so buyers can see the basis for each comparison.",
++  },
++  {
++    question: "How often are prices refreshed?",
++    answer:
++      "Comparison pages show the timestamp of the most recent price sync so you always know how current the figures are.",
++  },
++  {
++    question: "Can I use this data for procurement decisions?",
++    answer:
++      "This prototype is for demonstration only and is not affiliated with the Government e-Marketplace, Amazon, or Flipkart. Always verify figures against the live source before citing them.",
++  },
++]
+ 
+ const steps = [
+   {
+@@ -109,6 +133,13 @@ export default function About() {
+       </section>
+ 
+       <section className="mx-auto max-w-5xl px-6 py-16">
++        <h2 className="text-xl font-bold text-foreground">Frequently asked questions</h2>
++        <div className="mt-8">
++          <FAQAccordion items={FAQ_ITEMS} />
++        </div>
++      </section>
++
++      <section className="mx-auto max-w-5xl px-6 pb-16">
+         <div className="rounded-lg border border-border bg-card p-8 text-center">
+           <h2 className="text-lg font-semibold text-foreground">Data disclaimer</h2>
+           <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+diff --git a/src/pages/ProductComparison.jsx b/src/pages/ProductComparison.jsx
+index 5a6bd39..f619bdf 100644
+--- a/src/pages/ProductComparison.jsx
++++ b/src/pages/ProductComparison.jsx
+@@ -1,5 +1,6 @@
++import { useState } from "react"
+ import { Link, useParams } from "react-router-dom"
+-import { ChevronRight, TrendingDown, TrendingUp, ArrowLeft } from "lucide-react"
++import { ChevronRight, TrendingDown, TrendingUp, ArrowLeft, Copy, Check } from "lucide-react"
+ import MetricCard from "@/components/MetricCard"
+ import ComparisonTable from "@/components/ComparisonTable"
+ import MatchingFlow from "@/components/MatchingFlow"
+@@ -7,6 +8,30 @@ import AnalyticsSummary from "@/components/AnalyticsSummary"
+ import { formatINR, formatPercent } from "@/lib/utils"
+ import { getComparison } from "@/data/mockProducts"
+ 
++const LAST_SYNCED = new Date()
++
++function CopyLinkButton() {
++  const [copied, setCopied] = useState(false)
++
++  function handleCopy() {
++    navigator.clipboard?.writeText(window.location.href).then(() => {
++      setCopied(true)
++      setTimeout(() => setCopied(false), 2000)
++    })
++  }
++
++  return (
++    <button
++      type="button"
++      onClick={handleCopy}
++      className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:bg-muted-surface hover:text-foreground"
++    >
++      {copied ? <Check className="h-3.5 w-3.5 text-positive" /> : <Copy className="h-3.5 w-3.5" />}
++      {copied ? "Copied" : "Copy link"}
++    </button>
++  )
++}
++
+ export default function ProductComparison() {
+   const { productId } = useParams()
+   const comparison = getComparison(productId)
+@@ -27,13 +52,23 @@ export default function ProductComparison() {
+ 
+   return (
+     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+-      <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
+-        <Link to="/search" className="inline-flex items-center gap-1 hover:text-primary">
+-          <ArrowLeft className="h-3.5 w-3.5" />
+-          Search Results
+-        </Link>
+-        <ChevronRight className="h-3.5 w-3.5" />
+-        <span className="text-foreground">{product.name}</span>
++      <div className="flex flex-wrap items-center justify-between gap-3">
++        <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
++          <Link to="/search" className="inline-flex items-center gap-1 hover:text-primary">
++            <ArrowLeft className="h-3.5 w-3.5" />
++            Search Results
++          </Link>
++          <ChevronRight className="h-3.5 w-3.5" />
++          <span className="text-foreground">{product.name}</span>
++        </div>
++        <div className="flex items-center gap-3">
++          <span className="text-xs text-muted">
++            Prices last synced {LAST_SYNCED.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
++            {" · "}
++            {LAST_SYNCED.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
++          </span>
++          <CopyLinkButton />
++        </div>
+       </div>
+ 
+       <div className="mt-4 flex flex-col gap-6 rounded-lg border border-border bg-surface p-6 sm:flex-row sm:items-center">
+diff --git a/src/pages/SearchResults.jsx b/src/pages/SearchResults.jsx
+index 5b077bd..42f22d0 100644
+--- a/src/pages/SearchResults.jsx
++++ b/src/pages/SearchResults.jsx
+@@ -1,8 +1,9 @@
+-import { useMemo, useState } from "react"
++import { useEffect, useMemo, useState } from "react"
+ import { useSearchParams } from "react-router-dom"
+ import { SlidersHorizontal } from "lucide-react"
+ import SearchBar from "@/components/SearchBar"
+ import ProductCard from "@/components/ProductCard"
++import ProductCardSkeleton from "@/components/ProductCardSkeleton"
+ import { CATEGORIES, PLATFORMS, searchProducts } from "@/data/mockProducts"
+ 
+ export default function SearchResults() {
+@@ -11,6 +12,13 @@ export default function SearchResults() {
+   const [category, setCategory] = useState(searchParams.get("category") ?? "")
+   const [platform, setPlatform] = useState("")
+   const [sort, setSort] = useState("relevance")
++  const [isLoading, setIsLoading] = useState(true)
++
++  useEffect(() => {
++    setIsLoading(true)
++    const timer = setTimeout(() => setIsLoading(false), 350)
++    return () => clearTimeout(timer)
++  }, [query, category, platform])
+ 
+   const products = useMemo(
+     () => searchProducts(query, { category: category || undefined, platform: platform || undefined }),
+@@ -136,7 +144,13 @@ export default function SearchResults() {
+         </aside>
+ 
+         <div className="flex-1">
+-          {cards.length === 0 ? (
++          {isLoading ? (
++            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
++              {Array.from({ length: 6 }).map((_, i) => (
++                <ProductCardSkeleton key={i} />
++              ))}
++            </div>
++          ) : cards.length === 0 ? (
+             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface py-24 text-center">
+               <p className="text-sm font-semibold text-foreground">No matching products found</p>
+               <p className="mt-1 text-sm text-muted">Try a different search term or clear your filters.</p>

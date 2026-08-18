@@ -1,11 +1,36 @@
+import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { ChevronRight, TrendingDown, TrendingUp, ArrowLeft } from "lucide-react"
+import { ChevronRight, TrendingDown, TrendingUp, ArrowLeft, Copy, Check } from "lucide-react"
 import MetricCard from "@/components/MetricCard"
 import ComparisonTable from "@/components/ComparisonTable"
 import MatchingFlow from "@/components/MatchingFlow"
 import AnalyticsSummary from "@/components/AnalyticsSummary"
 import { formatINR, formatPercent } from "@/lib/utils"
 import { getComparison } from "@/data/mockProducts"
+
+const LAST_SYNCED = new Date()
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:bg-muted-surface hover:text-foreground"
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-positive" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "Copied" : "Copy link"}
+    </button>
+  )
+}
 
 export default function ProductComparison() {
   const { productId } = useParams()
@@ -27,13 +52,23 @@ export default function ProductComparison() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
-        <Link to="/search" className="inline-flex items-center gap-1 hover:text-primary">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Search Results
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-foreground">{product.name}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
+          <Link to="/search" className="inline-flex items-center gap-1 hover:text-primary">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Search Results
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="text-foreground">{product.name}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted">
+            Prices last synced {LAST_SYNCED.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            {" · "}
+            {LAST_SYNCED.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          <CopyLinkButton />
+        </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-6 rounded-lg border border-border bg-surface p-6 sm:flex-row sm:items-center">

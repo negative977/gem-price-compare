@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
+import ScrollToTopButton from "@/components/ScrollToTopButton"
 import Home from "@/pages/Home"
 import SearchResults from "@/pages/SearchResults"
 import ProductComparison from "@/pages/ProductComparison"
@@ -23,6 +24,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <ScrollToTopButton />
     </div>
   )
 }

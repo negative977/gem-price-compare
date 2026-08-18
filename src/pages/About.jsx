@@ -1,4 +1,28 @@
 import { ShieldCheck, ScanSearch, LineChart, GitCompareArrows, Database, Layers } from "lucide-react"
+import FAQAccordion from "@/components/FAQAccordion"
+
+const FAQ_ITEMS = [
+  {
+    question: "Where does the price data come from?",
+    answer:
+      "This preview uses illustrative sample data. In production, listings would be pulled from the GeM catalogue and partner retail platforms on a scheduled basis.",
+  },
+  {
+    question: "How is a 'match' score calculated?",
+    answer:
+      "Match confidence compares normalized attributes — brand, model, specifications, and category — between a GeM listing and a candidate retail listing, so buyers can see the basis for each comparison.",
+  },
+  {
+    question: "How often are prices refreshed?",
+    answer:
+      "Comparison pages show the timestamp of the most recent price sync so you always know how current the figures are.",
+  },
+  {
+    question: "Can I use this data for procurement decisions?",
+    answer:
+      "This prototype is for demonstration only and is not affiliated with the Government e-Marketplace, Amazon, or Flipkart. Always verify figures against the live source before citing them.",
+  },
+]
 
 const steps = [
   {
@@ -109,6 +133,13 @@ export default function About() {
       </section>
 
       <section className="mx-auto max-w-5xl px-6 py-16">
+        <h2 className="text-xl font-bold text-foreground">Frequently asked questions</h2>
+        <div className="mt-8">
+          <FAQAccordion items={FAQ_ITEMS} />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 pb-16">
         <div className="rounded-lg border border-border bg-card p-8 text-center">
           <h2 className="text-lg font-semibold text-foreground">Data disclaimer</h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
